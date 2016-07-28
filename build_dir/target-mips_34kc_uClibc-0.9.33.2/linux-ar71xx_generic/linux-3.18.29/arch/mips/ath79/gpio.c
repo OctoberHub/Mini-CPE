@@ -211,6 +211,7 @@ void __init ath79_gpio_output_select(unsigned gpio, u8 val)
 
 void e430_init(void)
 {
+	u_int32_t data;
 	void __iomem *base = ath79_gpio_base; 
 	data = __raw_readl(base+ATH_GPIO_OE);
 	data = (data & 0xfffffffc) ;    
