@@ -219,6 +219,53 @@ void e430_init(void)
 	__raw_writel(data, base+ATH_GPIO_OE);
 }
 
+
+void ath_hs_uart_init(void)
+{
+	u_int32_t data;
+	void __iomem *base = ath79_gpio_base; 
+#define ATH_GPIO_OUT_FUNCTION2		0x34
+#define GPIO_OUT_FUNCTION2_ENABLE_GPIO_10_MASK                       0x00ff0000
+#define GPIO_OUT_FUNCTION2_ENABLE_GPIO_10_LSB                        16
+
+#define ATH_GPIO_OUT_FUNCTION3		0x38
+#define GPIO_OUT_FUNCTION3_ENABLE_GPIO_12_MASK                       0x000000ff
+#define GPIO_OUT_FUNCTION3_ENABLE_GPIO_12_LSB                        0
+#define GPIO_OUT_FUNCTION3_ENABLE_GPIO_13_LSB                        8
+
+#define GPIO_OUT_FUNCTION3_ENABLE_GPIO_13_MASK                       0x0000ff00
+#define GPIO_OUT_FUNCTION3_ENABLE_GPIO_13_SET(x)                     (((x) << GPIO_OUT_FUNCTION3_ENABLE_GPIO_13_LSB) & GPIO_OUT_FUNCTION3_ENABLE_GPIO_13_MASK)
+
+#define GPIO_OUT_FUNCTION2_ENABLE_GPIO_10_SET(x)                     (((x) << GPIO_OUT_FUNCTION2_ENABLE_GPIO_10_LSB) & GPIO_OUT_FUNCTION2_ENABLE_GPIO_10_MASK)
+#define GPIO_OUT_FUNCTION3_ENABLE_GPIO_12_SET(x)                     (((x) << GPIO_OUT_FUNCTION3_ENABLE_GPIO_12_LSB) & GPIO_OUT_FUNCTION3_ENABLE_GPIO_12_MASK)
+
+#define ATH_GPIO_OE			0x0
+#define ATH_GPIO_IN_ENABLE9		0x68
+
+
+	// GPIO Settings for HS_UART
+	// Enabling UART1_TD as output on GPIO13	
+
+	data = __raw_readl(base+ATH_GPIO_OUT_FUNCTION3);
+	data = (data & ~GPIO_OUT_FUNCTION3_ENABLE_GPIO_13_MASK) |
+		GPIO_OUT_FUNCTION3_ENABLE_GPIO_13_SET(0x4f);
+	__raw_writel(data, base+ATH_GPIO_OUT_FUNCTION3);
+
+	// Enabling UART1_TD as outputs on GPIO13
+	data = __raw_readl(base+ATH_GPIO_OE);
+	data = (data & 0xffffcfff) | 0x4000;   //bit13 =0  output,  bit14=1 in
+	__raw_writel(data, base+ATH_GPIO_OE);   /*set output*/
+
+	// Enabling UART1_RD as inputs on GPIO 14
+	__raw_writel(0x0e0000, base+ATH_GPIO_IN_ENABLE9);
+
+	//set GPIO15 GPIO16 OUTPUT
+	data = __raw_readl(base+ATH_GPIO_OE);
+	data = (data & 0xfffE7fff) ;   //bit15 =0 bit16=0 output,    
+	__raw_writel(data, base+ATH_GPIO_OE);	/*set output*/
+
+}
+
 void __init ath79_gpio_init(void)
 {
 	int err;

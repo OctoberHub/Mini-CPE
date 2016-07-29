@@ -37,15 +37,17 @@
 #include "dev-usb.h"
 #include "dev-wmac.h"
 #include "machtypes.h"
-extern void e430_init(void);
 
+extern void ath_hs_uart_init(void);
+extern void e430_init(void);
+#define DB120_GPIO_HS_TD		10
 #define DB120_GPIO_LED_USB		11
 #define DB120_GPIO_LED_WLAN_5G		12
 #define DB120_GPIO_LED_WLAN_2G		13
 #define DB120_GPIO_LED_STATUS		14
-#define DB120_GPIO_LED_WPS		15
+#define DB120_GPIO_485_DE1		15
 
-#define DB120_GPIO_BTN_WPS		16
+#define DB120_GPIO_485_DE2		16
 
 #define DB120_KEYS_POLL_INTERVAL	20	/* msecs */
 #define DB120_KEYS_DEBOUNCE_INTERVAL	(3 * DB120_KEYS_POLL_INTERVAL)
@@ -54,13 +56,14 @@ extern void e430_init(void);
 #define DB120_MAC1_OFFSET		6
 #define DB120_WMAC_CALDATA_OFFSET	0x1000
 #define DB120_PCIE_CALDATA_OFFSET	0x5000
-
+#if 0
 static struct gpio_led db120_leds_gpio[] __initdata = {
 	{
 		.name		= "db120:green:status",
 		.gpio		= DB120_GPIO_LED_STATUS,
 		.active_low	= 1,
 	},
+/*,
 	{
 		.name		= "db120:green:wps",
 		.gpio		= DB120_GPIO_LED_WPS,
@@ -80,20 +83,20 @@ static struct gpio_led db120_leds_gpio[] __initdata = {
 		.name		= "db120:green:usb",
 		.gpio		= DB120_GPIO_LED_USB,
 		.active_low	= 1,
-	}
+	}*/
 };
 
 static struct gpio_keys_button db120_gpio_keys[] __initdata = {
-	{
+	/*{
 		.desc		= "WPS button",
 		.type		= EV_KEY,
 		.code		= KEY_WPS_BUTTON,
 		.debounce_interval = DB120_KEYS_DEBOUNCE_INTERVAL,
 		.gpio		= DB120_GPIO_BTN_WPS,
 		.active_low	= 1,
-	},
+	},*/
 };
-
+#endif
 static struct ar8327_pad_cfg db120_ar8327_pad0_cfg = {
 	.mode = AR8327_PAD_MAC_RGMII,
 	.txclk_delay_en = true,
@@ -130,23 +133,44 @@ static struct mdio_board_info db120_mdio0_info[] = {
 	},
 };
 
+typedef unsigned int ath_reg_t;
+
+#define ath_reg_rd(_phys)	(*(volatile ath_reg_t *)KSEG1ADDR(_phys))
+
+#define ath_reg_wr_nf(_phys, _val) \
+	((*(volatile ath_reg_t *)KSEG1ADDR(_phys)) = (_val))
+
+#define ath_reg_wr(_phys, _val) do {	\
+	ath_reg_wr_nf(_phys, _val);	\
+	ath_reg_rd(_phys);		\
+} while(0)
+#define ath_reg_rmw_set(_reg, _mask)	do {			\
+		ath_reg_wr((_reg), (ath_reg_rd((_reg)) | (_mask))); \
+		ath_reg_rd((_reg)); 				\
+	} while(0)
+	
+#define ath_reg_rmw_clear(_reg, _mask) do {			\
+		ath_reg_wr((_reg), (ath_reg_rd((_reg)) & ~(_mask)));	\
+		ath_reg_rd((_reg)); 				\
+	} while(0)
 static void __init db120_setup(void)
 {
 	u8 *art = (u8 *) KSEG1ADDR(0x1fff0000);
-
+	
 	ath79_gpio_function_enable(AR934X_GPIO_FUNC_JTAG_DISABLE);
 	e430_init();
 	
 	ath79_gpio_output_select(0, AR934X_GPIO_OUT_GPIO);
 	ath79_gpio_output_select(1, AR934X_GPIO_OUT_GPIO);
 
-	ath79_register_m25p80(NULL);
-
+	//ath79_gpio_output_select(DB120_GPIO_LED_USB, 1);
+	ath79_register_m25p80_multi(NULL);
+/*
 	ath79_register_leds_gpio(-1, ARRAY_SIZE(db120_leds_gpio),
 				 db120_leds_gpio);
 	ath79_register_gpio_keys_polled(-1, DB120_KEYS_POLL_INTERVAL,
 					ARRAY_SIZE(db120_gpio_keys),
-					db120_gpio_keys);
+					db120_gpio_keys);*/
 	ath79_register_usb();
 	ath79_register_wmac(art + DB120_WMAC_CALDATA_OFFSET, NULL);
 	ap91_pci_init(art + DB120_PCIE_CALDATA_OFFSET, NULL);
@@ -178,6 +202,10 @@ static void __init db120_setup(void)
 	ath79_register_eth(1);
 
 	ath79_register_nfc();
+	ath_hs_uart_init(); 	
+	
+	ath79_gpio_output_select(DB120_GPIO_485_DE1, 0);
+	ath79_gpio_output_select(DB120_GPIO_485_DE2, 0);
 }
 
 MIPS_MACHINE(ATH79_MACH_DB120, "DB120", "Atheros DB120 reference board",
