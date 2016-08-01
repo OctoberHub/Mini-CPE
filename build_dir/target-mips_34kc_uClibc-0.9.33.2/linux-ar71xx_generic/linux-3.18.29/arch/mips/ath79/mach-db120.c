@@ -158,10 +158,8 @@ static void __init db120_setup(void)
 	u8 *art = (u8 *) KSEG1ADDR(0x1fff0000);
 	
 	ath79_gpio_function_enable(AR934X_GPIO_FUNC_JTAG_DISABLE);
-	e430_init();
+
 	
-	ath79_gpio_output_select(0, AR934X_GPIO_OUT_GPIO);
-	ath79_gpio_output_select(1, AR934X_GPIO_OUT_GPIO);
 
 	//ath79_gpio_output_select(DB120_GPIO_LED_USB, 1);
 	ath79_register_m25p80_multi(NULL);
@@ -203,9 +201,13 @@ static void __init db120_setup(void)
 
 	ath79_register_nfc();
 	ath_hs_uart_init(); 	
+	e430_init();
 	
 	ath79_gpio_output_select(DB120_GPIO_485_DE1, 0);
 	ath79_gpio_output_select(DB120_GPIO_485_DE2, 0);
+
+	ath79_gpio_output_select(0, AR934X_GPIO_OUT_GPIO);
+	ath79_gpio_output_select(1, AR934X_GPIO_OUT_GPIO);
 }
 
 MIPS_MACHINE(ATH79_MACH_DB120, "DB120", "Atheros DB120 reference board",
